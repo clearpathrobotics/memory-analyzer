@@ -1,3 +1,4 @@
+# -*- mode: python -*-
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This source code is licensed under the MIT license found in the
@@ -7,6 +8,7 @@ try:
   import objgraph
   import os
   import sys
+  import random
   import re
   from pympler import muppy, summary
   import pickle
@@ -55,10 +57,15 @@ try:
 
 
   def create_references(sublist):
-      obj = sublist[0]
-      obj_shortname = obj.split('.')[-1]
+      objname = sublist[0]
+      obj_shortname = objname.split('.')[-1]
       obj_shortname = re.sub("[^A-Za-z0-9._]+", "", obj_shortname)
       dirname = os.path.dirname("{{ output_path }}")
+      try:
+        obj = random.choice(objgraph.by_type(objname))
+      except IndexError:
+        print(f"Unable to get objects of type {objname}. Note that the GC does not track simple objects like int or str.")
+        obj = None
       with SwallowPrints():
           forw = forward_references(dirname, obj, obj_shortname)
           back = backwards_references(dirname, obj, obj_shortname)
