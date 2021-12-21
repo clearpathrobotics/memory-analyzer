@@ -8,7 +8,7 @@ import curses
 import os
 import pickle
 import subprocess
-
+import copy
 import click
 import prettytable
 
@@ -58,13 +58,14 @@ def format_summary_output(page):
     pt = init_table(references, snapshot)
     items.sort(key=lambda x: x[2], reverse=True)
     for sublist in items:
+        slist = copy.deepcopy(sublist)
         if snapshot:
-            sublist[1] = f"{sublist[1]:+}"
-        sublist[2] = readable_size(sublist[2], snapshot)
-        if len(sublist) != len(pt.field_names):
+            slist[1] = f"{slist[1]:+}"
+        slist[2] = readable_size(slist[2], snapshot)
+        if len(slist) != len(pt.field_names):
             # Fill in missing data with "".
-            sublist.extend(["" for _ in range(len(pt.field_names) - len(sublist))])
-        pt.add_row(sublist)
+            slist.extend(["" for _ in range(len(pt.field_names) - len(slist))])
+        pt.add_row(slist)
     return pt
 
 

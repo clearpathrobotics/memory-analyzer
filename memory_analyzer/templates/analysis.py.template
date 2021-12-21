@@ -9,7 +9,9 @@ try:
   import os
   import sys
   import random
+  import inspect
   import re
+  import gc
   from pympler import muppy, summary
   import pickle
   try:
@@ -47,12 +49,12 @@ try:
 
   def forward_references(dirname, obj, shortname):
     filename_forw = f'{dirname}/ref_{{ pid }}_{shortname}.png'
-    objgraph.show_refs(obj, filename=filename_forw)
+    objgraph.show_refs(obj, max_depth=5, shortnames=False, refcounts=True, filename=filename_forw)
     return filename_forw
 
   def backwards_references(dirname, obj, shortname):
     filename_back = f'{dirname}/backref_{{ pid }}_{shortname}.png'
-    objgraph.show_backrefs(obj, filename=filename_back)
+    objgraph.show_backrefs(obj, max_depth=5, shortnames=False, refcounts=True, filename=filename_back)
     return filename_back
 
 
@@ -71,6 +73,7 @@ try:
           back = backwards_references(dirname, obj, obj_shortname)
       return forw, back
 
+  gc.collect()
   all_objects = muppy.get_objects(remove_dups=True)
   summ = summary.summarize(all_objects)
   if {{ num_refs }} > 0:

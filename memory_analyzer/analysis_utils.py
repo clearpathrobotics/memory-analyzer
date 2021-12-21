@@ -203,7 +203,8 @@ def snapshot_diff(cur_items, snapshot_file):
     for cur_item in cur_items:
         for prev_item in prev_items:
             if cur_item.pid == prev_item.pid:
-                diff = summary.get_diff(cur_item.data, prev_item.data)
+                #diff = summary.get_diff(cur_item.data, prev_item.data)
+                diff = summary.get_diff(prev_item.data, cur_item.data)
                 differences.append(
                     RetrievedObjects(
                         pid=cur_item.pid,
@@ -212,7 +213,8 @@ def snapshot_diff(cur_items, snapshot_file):
                     )
                 )
     if not differences:
-        diff = summary.get_diff(cur_items[0].data, prev_items[0].data)
+        #diff = summary.get_diff(cur_items[0].data, prev_items[0].data)
+        diff = summary.get_diff(prev_items[0].data, cur_items[0].data)
         differences.append(
             RetrievedObjects(pid=0, title=f"Snapshot Differences", data=diff)
         )
