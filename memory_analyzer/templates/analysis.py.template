@@ -14,6 +14,8 @@ try:
   import gc
   from pympler import muppy, summary
   import pickle
+  import guppy
+
   try:
       from types import InstanceType
   except ImportError:
@@ -49,44 +51,48 @@ try:
 
   def forward_references(dirname, obj, shortname):
     filename_forw = f'{dirname}/ref_{{ pid }}_{shortname}.png'
-    objgraph.show_refs(obj, max_depth=5, shortnames=False, refcounts=True, filename=filename_forw)
+    objgraph.show_refs([obj], shortnames=False, refcounts=True, filename=filename_forw, filter=lambda x: not type(x).__module__.startswith('guppy'))
     return filename_forw
 
   def backwards_references(dirname, obj, shortname):
     filename_back = f'{dirname}/backref_{{ pid }}_{shortname}.png'
-    objgraph.show_backrefs(obj, max_depth=5, shortnames=False, refcounts=True, filename=filename_back)
+    objgraph.show_backrefs([obj], shortnames=False, refcounts=True, filename=filename_back, filter=lambda x: not type(x).__module__.startswith('guppy'))
     return filename_back
 
-
-  def create_references(sublist):
-      objname = sublist[0]
-      obj_shortname = objname.split('.')[-1]
-      obj_shortname = re.sub("[^A-Za-z0-9._]+", "", obj_shortname)
+  def create_references(row):
+      objname = f"{row.kind}"
       dirname = os.path.dirname("{{ output_path }}")
       try:
-        obj = random.choice(objgraph.by_type(objname))
+        objs = random.choice(row.byrcs[0].byid).theone
+        with SwallowPrints():
+          forw = forward_references(dirname, objs, objname)
+          back = backwards_references(dirname, objs, objname)
       except IndexError:
         print(f"Unable to get objects of type {objname}. Note that the GC does not track simple objects like int or str.")
-        obj = None
-      with SwallowPrints():
-          forw = forward_references(dirname, obj, obj_shortname)
-          back = backwards_references(dirname, obj, obj_shortname)
+        forw = back = None
       return forw, back
 
-  gc.collect()
-  all_objects = muppy.get_objects(remove_dups=True)
-  summ = summary.summarize(all_objects)
+  heap = guppy.hpy()
+  heap_status = heap.heap()
+  heap_summ = [[row.name, row.count, row.size] for row in heap_status.stat.get_rows()]
+  heapu_stat = heap.heapu()
+  heapu_summ = [[f"{row.name} (leaked)", row.count, row.size] for row in heapu_stat.get_rows()]
+
+  summ = heap_summ + heapu_summ
   if {{ num_refs }} > 0:
-      summ.sort(key=lambda x: x[2], reverse=True)
-      for sublist in summ[:{{ num_refs }}]:
-          forw, back = create_references(sublist)
-          sublist.extend([forw, back])
+    summ.sort(key=lambda x: x[2], reverse=True)
+    for i in range({{ num_refs }}):
+      row = heap_status[i]
+      forw, back = create_references(row)
+      summ[i].extend([forw, back])
+
   for obj in {{ specific_refs }}:
-      for sublist in summ:
-          if obj in sublist[0]:
-              forw, back = create_references(sublist)
-              sublist.extend([forw, back])
-              break
+    for i in range(len(heap_status)):
+      if obj == str(heap_status[i].kind):
+        row = heap_status[i]
+        forw, back = create_references(row)
+        summ[i].extend([forw, back])
+        break
 
   with open('/tmp/memanz_pipe_{{ pid }}', 'wb') as fifo:
       pickle.dump(summ, fifo)
