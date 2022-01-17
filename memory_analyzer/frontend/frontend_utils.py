@@ -20,7 +20,7 @@ def readable_size(i, snapshot=False):
     Pretty-print the integer `i` as a human-readable size representation.
     """
     degree = 0
-    while i > 1024:
+    while i > 1024 or i < -1024:
         i = i / float(1024)
         degree += 1
     scales = ["B", "KB", "MB", "GB", "TB", "EB"]
