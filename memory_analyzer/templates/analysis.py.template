@@ -72,6 +72,7 @@ try:
         forw = back = None
       return forw, back
 
+  gc.collect()
   heap = guppy.hpy()
   heap_status = heap.heap()
   heap_summ = [[row.name, row.count, row.size] for row in heap_status.stat.get_rows()]
